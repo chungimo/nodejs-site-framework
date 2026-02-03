@@ -1,0 +1,332 @@
+/* ============================================
+   Site Framework - Modal System
+   ============================================
+
+   USAGE: Import after components.css
+
+   ENTRY POINTS:
+   - .sf-modal-overlay: Backdrop overlay
+   - .sf-modal: Modal container (add .sf-glass-panel)
+   - .sf-modal-fullscreen: Near full-screen modal
+
+   FEATURES:
+   - Z-index stacking for multiple modals
+   - Close button (red X)
+   - Dirty form confirmation
+   - Keyboard navigation (Tab, Enter, Esc)
+   ============================================ */
+
+/* ============================================
+   Modal Overlay
+   ============================================ */
+.sf-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  /* backdrop-filter: blur(4px); disabled for performance */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: var(--sf-z-modal);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity var(--sf-transition-normal), visibility var(--sf-transition-normal);
+}
+
+.sf-modal-overlay.sf-open {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* Stacked modal gets higher z-index */
+.sf-modal-overlay.sf-stacked {
+  z-index: var(--sf-z-modal-stacked);
+}
+
+/* ============================================
+   Modal Container
+   ============================================ */
+.sf-modal {
+  position: relative;
+  min-width: 360px;
+  max-width: 90vw;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  opacity: 0;
+  transform: scale(0.9) translateY(-20px);
+  transition: opacity var(--sf-transition-normal), transform var(--sf-transition-normal);
+}
+
+.sf-modal-overlay.sf-open .sf-modal {
+  opacity: 1;
+  transform: scale(1) translateY(0);
+}
+
+/* Fullscreen modal variant (settings page) */
+.sf-modal-fullscreen {
+  width: 90vw;
+  height: 85vh;
+  max-width: 1200px;
+}
+
+/* ============================================
+   Modal Header
+   ============================================ */
+.sf-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--sf-spacing-lg);
+  border-bottom: 1px solid var(--sf-border-light);
+  flex-shrink: 0;
+}
+
+.sf-modal-title {
+  margin: 0;
+  font-size: var(--sf-font-size-xl);
+  font-weight: 600;
+  color: var(--sf-text-primary);
+}
+
+/* Close button (red X) */
+.sf-modal-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: rgba(var(--sf-danger-rgb), 0.15);
+  border: 1px solid rgba(var(--sf-danger-rgb), 0.3);
+  border-radius: var(--sf-radius-sm);
+  color: var(--sf-danger);
+  font-size: 18px;
+  cursor: pointer;
+  transition: all var(--sf-transition-fast);
+}
+
+.sf-modal-close:hover {
+  background: rgba(var(--sf-danger-rgb), 0.25);
+  border-color: rgba(var(--sf-danger-rgb), 0.5);
+  transform: scale(1.05);
+}
+
+.sf-modal-close:active {
+  transform: scale(0.95);
+}
+
+/* ============================================
+   Modal Content
+   ============================================ */
+.sf-modal-content {
+  flex: 1;
+  padding: var(--sf-spacing-lg);
+  overflow-y: auto;
+}
+
+/* ============================================
+   Modal Footer
+   ============================================ */
+.sf-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--sf-spacing-md);
+  padding: var(--sf-spacing-md) var(--sf-spacing-lg);
+  border-top: 1px solid var(--sf-border-light);
+  flex-shrink: 0;
+}
+
+/* ============================================
+   Confirmation Dialog (Stacked Modal)
+   ============================================ */
+.sf-confirm-modal {
+  min-width: 320px;
+  max-width: 400px;
+}
+
+.sf-confirm-modal .sf-modal-content {
+  text-align: center;
+  padding: var(--sf-spacing-xl) var(--sf-spacing-lg);
+}
+
+.sf-confirm-icon {
+  font-size: 48px;
+  margin-bottom: var(--sf-spacing-md);
+}
+
+.sf-confirm-icon.sf-warning {
+  color: var(--sf-warning);
+}
+
+.sf-confirm-icon.sf-danger {
+  color: var(--sf-danger);
+}
+
+.sf-confirm-message {
+  font-size: var(--sf-font-size-lg);
+  color: var(--sf-text-secondary);
+  margin-bottom: var(--sf-spacing-lg);
+}
+
+.sf-confirm-modal .sf-modal-footer {
+  justify-content: center;
+}
+
+/* ============================================
+   Settings Modal Layout (Sidebar)
+   ============================================ */
+.sf-settings-layout {
+  display: flex;
+  height: 100%;
+}
+
+.sf-settings-sidebar {
+  width: 220px;
+  border-right: 1px solid var(--sf-border-light);
+  padding: var(--sf-spacing-md);
+  flex-shrink: 0;
+  overflow-y: auto;
+}
+
+.sf-settings-nav-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--sf-spacing-md);
+  width: 100%;
+  padding: 12px 16px;
+  background: transparent;
+  border: none;
+  border-radius: var(--sf-radius-md);
+  font-family: var(--sf-font-family);
+  font-size: var(--sf-font-size-md);
+  color: var(--sf-text-secondary);
+  cursor: pointer;
+  transition: all var(--sf-transition-fast);
+  text-align: left;
+}
+
+.sf-settings-nav-item:hover {
+  background: var(--sf-bg-hover);
+  color: var(--sf-text-primary);
+}
+
+.sf-settings-nav-item.sf-active {
+  background: rgba(var(--sf-primary-rgb), 0.15);
+  color: var(--sf-primary);
+}
+
+.sf-settings-nav-item.sf-active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 60%;
+  background: var(--sf-primary);
+  border-radius: 0 2px 2px 0;
+}
+
+.sf-settings-nav-icon {
+  font-size: 18px;
+  width: 24px;
+  text-align: center;
+}
+
+.sf-settings-content {
+  flex: 1;
+  padding: var(--sf-spacing-lg);
+  overflow-y: auto;
+}
+
+.sf-settings-section {
+  display: none;
+  animation: sf-slide-in 0.3s ease;
+}
+
+.sf-settings-section.sf-active {
+  display: block;
+}
+
+@keyframes sf-slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.sf-settings-section-title {
+  font-size: var(--sf-font-size-xl);
+  font-weight: 600;
+  color: var(--sf-text-primary);
+  margin-bottom: var(--sf-spacing-lg);
+  padding-bottom: var(--sf-spacing-md);
+  border-bottom: 1px solid var(--sf-border-light);
+}
+
+/* ============================================
+   Logs Terminal View
+   ============================================ */
+.sf-logs-container {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.sf-logs-toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--sf-spacing-md);
+  padding: var(--sf-spacing-md);
+  border-bottom: 1px solid var(--sf-border-light);
+}
+
+.sf-logs-terminal {
+  flex: 1;
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: var(--sf-radius-md);
+  padding: var(--sf-spacing-md);
+  font-family: var(--sf-font-mono);
+  font-size: var(--sf-font-size-sm);
+  overflow-y: auto;
+  line-height: 1.6;
+}
+
+.sf-log-entry {
+  display: flex;
+  gap: var(--sf-spacing-md);
+  padding: 4px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.sf-log-timestamp {
+  color: var(--sf-text-muted);
+  flex-shrink: 0;
+}
+
+.sf-log-level {
+  flex-shrink: 0;
+  padding: 2px 6px;
+  border-radius: var(--sf-radius-sm);
+  font-size: var(--sf-font-size-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.sf-log-level-info { background: rgba(var(--sf-info-rgb), 0.2); color: var(--sf-info); }
+.sf-log-level-warn { background: rgba(var(--sf-warning-rgb), 0.2); color: var(--sf-warning); }
+.sf-log-level-error { background: rgba(var(--sf-danger-rgb), 0.2); color: var(--sf-danger); }
+.sf-log-level-success { background: rgba(var(--sf-success-rgb), 0.2); color: var(--sf-success); }
+
+.sf-log-message {
+  color: var(--sf-text-secondary);
+  word-break: break-word;
+}

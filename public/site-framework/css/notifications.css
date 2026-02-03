@@ -1,0 +1,272 @@
+/* ============================================
+   Site Framework - Notification Channel Styles
+   ============================================
+
+   USAGE: Import after components.css
+   Contains styles for notification channel
+   configuration forms.
+
+   ENTRY POINTS:
+   - .sf-notify-channels: Channel list container
+   - .sf-notify-channel: Individual channel card
+   - .sf-notify-toggle: Enable/disable toggle switch
+   ============================================ */
+
+/* ============================================
+   Channel List & Cards
+   ============================================ */
+.sf-notify-channels {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sf-spacing-lg);
+}
+
+.sf-notify-channel {
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--sf-border-light);
+  border-radius: var(--sf-radius-md);
+  overflow: hidden;
+}
+
+.sf-notify-channel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--sf-spacing-md);
+  background: rgba(0, 0, 0, 0.15);
+  border-bottom: 1px solid var(--sf-border-light);
+}
+
+.sf-notify-channel-info {
+  display: flex;
+  align-items: center;
+  gap: var(--sf-spacing-md);
+}
+
+.sf-notify-channel-icon {
+  font-size: 24px;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(var(--sf-primary-rgb), 0.15);
+  border-radius: var(--sf-radius-sm);
+  color: var(--sf-primary);
+}
+
+/* Image icons (PNG) */
+img.sf-notify-channel-icon {
+  object-fit: contain;
+  padding: 6px;
+}
+
+.sf-notify-channel-name {
+  font-weight: 600;
+  color: var(--sf-text-primary);
+}
+
+.sf-notify-channel-desc {
+  font-size: var(--sf-font-size-sm);
+  color: var(--sf-text-muted);
+  margin-top: 2px;
+}
+
+/* ============================================
+   Toggle Switch
+   ============================================ */
+.sf-notify-toggle {
+  position: relative;
+  width: 48px;
+  height: 26px;
+  cursor: pointer;
+}
+
+.sf-notify-toggle input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.sf-notify-toggle-slider {
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--sf-border-light);
+  border-radius: 26px;
+  transition: all var(--sf-transition-fast);
+}
+
+.sf-notify-toggle-slider::before {
+  content: '';
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  left: 3px;
+  bottom: 3px;
+  background: var(--sf-text-muted);
+  border-radius: 50%;
+  transition: all var(--sf-transition-fast);
+}
+
+.sf-notify-toggle input:checked + .sf-notify-toggle-slider {
+  background: rgba(var(--sf-success-rgb), 0.3);
+  border-color: rgba(var(--sf-success-rgb), 0.5);
+}
+
+.sf-notify-toggle input:checked + .sf-notify-toggle-slider::before {
+  transform: translateX(22px);
+  background: var(--sf-success);
+  box-shadow: 0 0 8px rgba(var(--sf-success-rgb), 0.5);
+}
+
+/* ============================================
+   Channel Form Fields
+   ============================================ */
+.sf-notify-channel-body {
+  padding: var(--sf-spacing-md);
+  display: none;
+}
+
+.sf-notify-channel.sf-expanded .sf-notify-channel-body {
+  display: block;
+}
+
+.sf-notify-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sf-spacing-md);
+}
+
+/* Override browser autofill yellow background */
+.sf-notify-form input:-webkit-autofill,
+.sf-notify-form input:-webkit-autofill:hover,
+.sf-notify-form input:-webkit-autofill:focus,
+.sf-notify-form input:-webkit-autofill:active,
+.sf-notify-form select:-webkit-autofill,
+.sf-notify-form select:-webkit-autofill:hover,
+.sf-notify-form select:-webkit-autofill:focus,
+.sf-notify-form select:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 1000px rgba(0, 0, 0, 0.3) inset !important;
+  -webkit-text-fill-color: var(--sf-text-primary) !important;
+  box-shadow: 0 0 0 1000px rgba(0, 0, 0, 0.3) inset !important;
+  transition: background-color 5000s ease-in-out 0s;
+  caret-color: var(--sf-text-primary);
+}
+
+.sf-notify-form-row {
+  display: flex;
+  gap: var(--sf-spacing-md);
+}
+
+.sf-notify-form-row > .sf-field {
+  flex: 1;
+}
+
+.sf-notify-form-row > .sf-field.sf-field-sm {
+  flex: 0 0 120px;
+}
+
+/* Form actions */
+.sf-notify-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--sf-spacing-sm);
+  margin-top: var(--sf-spacing-md);
+  padding-top: var(--sf-spacing-md);
+  border-top: 1px solid var(--sf-border-light);
+}
+
+/* ============================================
+   Status Indicators
+   ============================================ */
+.sf-notify-status {
+  display: flex;
+  align-items: center;
+  gap: var(--sf-spacing-sm);
+  padding: var(--sf-spacing-sm) var(--sf-spacing-md);
+  border-radius: var(--sf-radius-sm);
+  font-size: var(--sf-font-size-sm);
+}
+
+.sf-notify-status-configured {
+  background: rgba(var(--sf-success-rgb), 0.1);
+  color: var(--sf-success);
+}
+
+.sf-notify-status-unconfigured {
+  background: rgba(var(--sf-warning-rgb), 0.1);
+  color: var(--sf-warning);
+}
+
+.sf-notify-status-icon {
+  font-size: 14px;
+}
+
+/* ============================================
+   Test Button
+   ============================================ */
+.sf-notify-test-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sf-spacing-sm);
+  padding: 8px 16px;
+  background: rgba(var(--sf-info-rgb), 0.15);
+  color: var(--sf-info);
+  border: 1px solid rgba(var(--sf-info-rgb), 0.3);
+  border-radius: var(--sf-radius-sm);
+  font-size: var(--sf-font-size-sm);
+  cursor: pointer;
+  transition: all var(--sf-transition-fast);
+}
+
+.sf-notify-test-btn:hover:not(:disabled) {
+  background: rgba(var(--sf-info-rgb), 0.25);
+  border-color: rgba(var(--sf-info-rgb), 0.5);
+}
+
+.sf-notify-test-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ============================================
+   Webhook-specific styles
+   ============================================ */
+.sf-notify-webhook-hint {
+  font-size: var(--sf-font-size-xs);
+  color: var(--sf-text-muted);
+  margin-top: var(--sf-spacing-xs);
+}
+
+.sf-notify-webhook-hint a {
+  color: var(--sf-primary);
+  text-decoration: none;
+}
+
+.sf-notify-webhook-hint a:hover {
+  text-decoration: underline;
+}
+
+/* ============================================
+   Responsive Adjustments
+   ============================================ */
+@media (max-width: 600px) {
+  .sf-notify-form-row {
+    flex-direction: column;
+  }
+
+  .sf-notify-form-row > .sf-field.sf-field-sm {
+    flex: 1;
+  }
+
+  .sf-notify-channel-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--sf-spacing-md);
+  }
+
+  .sf-notify-toggle {
+    align-self: flex-end;
+  }
+}

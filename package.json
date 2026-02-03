@@ -1,0 +1,27 @@
+{
+  "name": "site-framework",
+  "version": "1.0.0",
+  "description": "Reusable site framework with authentication, notifications, and database layer",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js"
+  },
+  "dependencies": {
+    "bcrypt": "^5.1.1",
+    "better-sqlite3": "^11.8.1",
+    "cookie-parser": "^1.4.7",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "jsonwebtoken": "^9.0.2"
+  },
+  "overrides": {
+    "tar": "^7.4.3",
+    "glob": "^10.4.5",
+    "rimraf": "^5.0.10",
+    "inflight": "npm:@pnpm/npm-conf@2.3.1"
+  },
+  "keywords": ["framework", "authentication", "notifications", "database"],
+  "author": "",
+  "license": "ISC"
+}

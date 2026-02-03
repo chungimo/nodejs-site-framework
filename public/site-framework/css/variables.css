@@ -1,0 +1,94 @@
+/* ============================================
+   Site Framework - CSS Variables
+   ============================================
+
+   USAGE: Import this file first in your main stylesheet.
+   These variables define the theme and can be easily
+   modified to change the entire site's look and feel.
+
+   COMMON CHANGE POINTS:
+   - Primary color: --sf-primary (default: teal/green)
+   - Background: --sf-bg-* variables
+   - Border radius: --sf-radius-*
+   ============================================ */
+
+:root {
+  /* ---- Primary Colors ---- */
+  --sf-primary: #00aa55;
+  --sf-primary-rgb: 0, 170, 85;
+  --sf-primary-hover: #00cc66;
+  --sf-primary-active: #008844;
+
+  /* ---- Status Colors ---- */
+  --sf-success: #00aa55;
+  --sf-success-rgb: 0, 170, 85;
+  --sf-warning: #cc9900;
+  --sf-warning-rgb: 204, 153, 0;
+  --sf-danger: #dd3333;
+  --sf-danger-rgb: 221, 51, 51;
+  --sf-info: #0099cc;
+  --sf-info-rgb: 0, 153, 204;
+
+  /* ---- Background Colors ---- */
+  --sf-bg-body: #ffffff;
+  --sf-bg-panel: rgba(245, 245, 245, 0.98);
+  --sf-bg-input: rgba(255, 255, 255, 0.9);
+  --sf-bg-hover: rgba(0, 0, 0, 0.05);
+  --sf-bg-active: rgba(0, 0, 0, 0.1);
+
+  /* ---- Text Colors ---- */
+  --sf-text-primary: #000000;
+  --sf-text-secondary: rgba(0, 0, 0, 0.8);
+  --sf-text-muted: rgba(0, 0, 0, 0.5);
+  --sf-text-placeholder: rgba(0, 0, 0, 0.4);
+
+  /* ---- Border Colors ---- */
+  --sf-border-light: rgba(0, 0, 0, 0.1);
+  --sf-border-medium: rgba(0, 0, 0, 0.2);
+  --sf-border-focus: rgba(var(--sf-primary-rgb), 0.7);
+  --sf-border-error: rgba(var(--sf-danger-rgb), 0.7);
+
+  /* ---- Spacing ---- */
+  --sf-spacing-xs: 4px;
+  --sf-spacing-sm: 8px;
+  --sf-spacing-md: 16px;
+  --sf-spacing-lg: 24px;
+  --sf-spacing-xl: 32px;
+
+  /* ---- Border Radius ---- */
+  --sf-radius-sm: 4px;
+  --sf-radius-md: 8px;
+  --sf-radius-lg: 12px;
+
+  /* ---- Shadows ---- */
+  --sf-shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.2);
+  --sf-shadow-md: 0 4px 16px rgba(0, 0, 0, 0.3);
+  --sf-shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.4);
+
+  /* ---- Glass Effect ---- */
+  /* NOTE: backdrop-filter can cause lag - set to 0 to disable */
+  --sf-glass-blur: 0;
+  --sf-glass-saturate: 1;
+
+  /* ---- Transitions ---- */
+  --sf-transition-fast: 0.15s ease;
+  --sf-transition-normal: 0.25s ease;
+  --sf-transition-slow: 0.4s ease;
+
+  /* ---- Z-Index Layers ---- */
+  --sf-z-dropdown: 1000;
+  --sf-z-modal: 2000;
+  --sf-z-modal-stacked: 2100;
+  --sf-z-notification: 3000;
+  --sf-z-tooltip: 4000;
+
+  /* ---- Typography ---- */
+  --sf-font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+  --sf-font-mono: 'Consolas', 'Monaco', 'Courier New', monospace;
+  --sf-font-size-xs: 12px;
+  --sf-font-size-sm: 13px;
+  --sf-font-size-md: 14px;
+  --sf-font-size-lg: 16px;
+  --sf-font-size-xl: 20px;
+  --sf-font-size-xxl: 24px;
+}

@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Site Framework</title>
+
+    <!-- Site Framework CSS -->
+    <link rel="stylesheet" href="site-framework/css/variables.css">
+    <link rel="stylesheet" href="site-framework/css/components.css">
+    <link rel="stylesheet" href="site-framework/css/modal.css">
+    <link rel="stylesheet" href="site-framework/css/notifications.css">
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: var(--sf-font-family);
+            background: var(--sf-bg-body);
+            color: var(--sf-text-primary);
+            min-height: 100vh;
+        }
+
+        /* Header */
+        .header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 60px;
+            background: var(--sf-bg-panel);
+            border-bottom: 1px solid var(--sf-border-light);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 24px;
+            z-index: 100;
+        }
+
+        .header-title {
+            font-size: var(--sf-font-size-xl);
+            font-weight: 600;
+            background: linear-gradient(135deg, var(--sf-primary), var(--sf-info));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .header-username {
+            font-size: var(--sf-font-size-md);
+            color: var(--sf-text-secondary);
+            display: none;
+        }
+
+        .header-username.visible {
+            display: block;
+        }
+
+        /* Menu Container */
+        .menu-wrapper {
+            position: relative;
+        }
+
+        .menu-hamburger {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            padding: 8px;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            border-radius: var(--sf-radius-sm);
+            transition: background var(--sf-transition-fast);
+        }
+
+        .menu-hamburger:hover {
+            background: var(--sf-bg-hover);
+        }
+
+        .hamburger-line {
+            width: 24px;
+            height: 2px;
+            background: var(--sf-text-primary);
+            border-radius: 1px;
+            transition: transform 0.15s ease, opacity 0.15s ease;
+        }
+
+        .menu-hamburger.active .hamburger-line:nth-child(1) {
+            transform: rotate(45deg) translate(5px, 5px);
+        }
+
+        .menu-hamburger.active .hamburger-line:nth-child(2) {
+            opacity: 0;
+        }
+
+        .menu-hamburger.active .hamburger-line:nth-child(3) {
+            transform: rotate(-45deg) translate(5px, -5px);
+        }
+
+        .menu-dropdown {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            margin-top: 8px;
+            min-width: 180px;
+            padding: 8px;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-10px);
+            transition: opacity 0.15s ease, transform 0.15s ease, visibility 0.15s ease;
+        }
+
+        .menu-dropdown.open {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+
+        .menu-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            width: 100%;
+            padding: 12px 16px;
+            background: transparent;
+            border: none;
+            border-radius: var(--sf-radius-sm);
+            color: var(--sf-text-secondary);
+            font-family: var(--sf-font-family);
+            font-size: var(--sf-font-size-md);
+            cursor: pointer;
+            transition: background 0.15s ease, color 0.15s ease;
+            text-align: left;
+        }
+
+        .menu-item:hover {
+            background: var(--sf-bg-hover);
+            color: var(--sf-text-primary);
+        }
+
+        .menu-item-icon {
+            width: 20px;
+            text-align: center;
+        }
+
+        /* Main Content */
+        .main-content {
+            padding-top: 60px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .hero {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 48px 24px;
+        }
+
+        .hero-title {
+            font-size: 48px;
+            font-weight: 700;
+            margin-bottom: 16px;
+            background: linear-gradient(135deg, var(--sf-primary), var(--sf-info));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero-subtitle {
+            font-size: var(--sf-font-size-lg);
+            color: var(--sf-text-secondary);
+            max-width: 600px;
+            margin-bottom: 32px;
+        }
+
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 24px;
+            max-width: 900px;
+            width: 100%;
+            margin-top: 48px;
+        }
+
+        .feature-card {
+            padding: 24px;
+            text-align: left;
+        }
+
+        .feature-icon {
+            font-size: 32px;
+            margin-bottom: 16px;
+        }
+
+        .feature-title {
+            font-size: var(--sf-font-size-lg);
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .feature-desc {
+            color: var(--sf-text-secondary);
+            font-size: var(--sf-font-size-md);
+        }
+
+        /* Status indicator */
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            background: rgba(var(--sf-success-rgb), 0.15);
+            border: 1px solid rgba(var(--sf-success-rgb), 0.3);
+            border-radius: 20px;
+            font-size: var(--sf-font-size-sm);
+            color: var(--sf-success);
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--sf-success);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header" data-1p-ignore="true" data-lpignore="true">
+        <h1 class="header-title">Site Framework</h1>
+        <div class="header-right" data-1p-ignore="true" data-lpignore="true">
+            <span id="header-username" class="header-username"></span>
+            <div id="menu-container" data-1p-ignore="true" data-lpignore="true" data-bwignore="true"></div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <section class="hero">
+            <div class="status-badge">
+                <span class="status-dot"></span>
+                <span id="status-text">Checking status...</span>
+            </div>
+
+            <h2 class="hero-title">Site Framework</h2>
+            <p class="hero-subtitle">
+                A reusable, modular web application framework with authentication,
+                user management, settings, and logging functionality.
+            </p>
+
+            <div class="feature-grid">
+                <div class="feature-card sf-glass-panel">
+                    <div class="feature-icon"><i class="sf-icon sf-icon-user"></i></div>
+                    <h3 class="feature-title">Authentication</h3>
+                    <p class="feature-desc">JWT-based login with session management and API key support.</p>
+                </div>
+
+                <div class="feature-card sf-glass-panel">
+                    <div class="feature-icon"><i class="sf-icon sf-icon-users"></i></div>
+                    <h3 class="feature-title">User Management</h3>
+                    <p class="feature-desc">Admin panel for creating, editing, and managing users.</p>
+                </div>
+
+                <div class="feature-card sf-glass-panel">
+                    <div class="feature-icon"><i class="sf-icon sf-icon-settings"></i></div>
+                    <h3 class="feature-title">Settings</h3>
+                    <p class="feature-desc">Configurable settings with a sidebar navigation modal.</p>
+                </div>
+
+                <div class="feature-card sf-glass-panel">
+                    <div class="feature-icon"><i class="sf-icon sf-icon-logs"></i></div>
+                    <h3 class="feature-title">Logging</h3>
+                    <p class="feature-desc">Terminal-style log viewer with filtering and auto-scroll.</p>
+                </div>
+
+                <div class="feature-card sf-glass-panel">
+                    <div class="feature-icon"><i class="sf-icon sf-icon-notifications"></i></div>
+                    <h3 class="feature-title">Notifications</h3>
+                    <p class="feature-desc">Multi-channel alerts via Teams, Slack, Discord, Email, and webhooks.</p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Site Framework JS -->
+    <script type="module">
+        import { Menu } from './site-framework/js/menu.js';
+        import { auth } from './site-framework/js/auth.js';
+        import { toast } from './site-framework/js/toast.js';
+        import { Modal } from './site-framework/js/modal.js';
+        import { LoginModal } from './site-framework/js/loginModal.js';
+        import { AccountModal } from './site-framework/js/accountModal.js';
+        import { SettingsModal } from './site-framework/js/settings.js';
+        import { LogsModal } from './site-framework/js/logs.js';
+        import { createUsersSection } from './site-framework/js/usersSection.js';
+        import { getAllChannelTypes, NotificationChannelForm, NotificationAPI } from './site-framework/js/notifications/index.js';
+
+        // Check API status
+        async function checkStatus() {
+            const statusText = document.getElementById('status-text');
+            try {
+                const res = await fetch('/api/status');
+                const data = await res.json();
+                statusText.textContent = data.status === 'ok' ? 'Server Running' : 'Server Error';
+            } catch (err) {
+                statusText.textContent = 'Server Offline';
+            }
+        }
+        checkStatus();
+
+        // Initialize menu
+        const menu = new Menu({
+            containerId: 'menu-container',
+            isLoggedIn: auth.isLoggedIn(),
+            onItemClick: handleMenuClick
+        });
+        menu.create();
+
+        // Username display element
+        const usernameEl = document.getElementById('header-username');
+
+        // Update username display
+        function updateUsernameDisplay(isLoggedIn, user) {
+            if (isLoggedIn && user) {
+                usernameEl.textContent = user.username;
+                usernameEl.classList.add('visible');
+            } else {
+                usernameEl.textContent = '';
+                usernameEl.classList.remove('visible');
+            }
+        }
+
+        // Set initial username display
+        if (auth.isLoggedIn()) {
+            updateUsernameDisplay(true, auth.getUser());
+        }
+
+        // Handle auth state changes
+        auth.setOnAuthChange((isLoggedIn, user) => {
+            menu.setLoggedIn(isLoggedIn);
+            updateUsernameDisplay(isLoggedIn, user);
+            if (isLoggedIn) {
+                toast.success(`Welcome, ${user.username}!`);
+            }
+        });
+
+        // Menu click handler
+        function handleMenuClick(itemId) {
+            switch (itemId) {
+                case 'account':
+                    if (auth.isLoggedIn()) {
+                        showAccountModal();
+                    } else {
+                        showLoginModal();
+                    }
+                    break;
+
+                case 'settings':
+                    showSettingsModal();
+                    break;
+
+                case 'logs':
+                    showLogsModal();
+                    break;
+
+                case 'logout':
+                    handleLogout();
+                    break;
+            }
+        }
+
+        // Show login modal
+        function showLoginModal() {
+            const modal = new LoginModal({
+                onLoginSuccess: (user) => {
+                    // Menu updates via auth.onAuthChange
+                }
+            });
+            modal.open();
+        }
+
+        // Show account modal
+        function showAccountModal() {
+            const modal = new AccountModal();
+            modal.open();
+        }
+
+        // Create notifications section content
+        function createNotificationsSection() {
+            const container = document.createElement('div');
+            container.className = 'sf-notify-channels';
+
+            const channelTypes = getAllChannelTypes();
+
+            channelTypes.forEach(async (channelConfig) => {
+                const channelContainer = document.createElement('div');
+                container.appendChild(channelContainer);
+
+                // Fetch existing config
+                let initialValues = {};
+                try {
+                    const saved = await NotificationAPI.get(channelConfig.id);
+                    if (saved) {
+                        initialValues = { enabled: saved.enabled, ...saved.config };
+                    }
+                } catch (err) {
+                    // Channel not configured yet, use defaults
+                }
+
+                // Create the form
+                new NotificationChannelForm({
+                    channelType: channelConfig.id,
+                    container: channelContainer,
+                    initialValues,
+                    onSave: async (values) => {
+                        try {
+                            await NotificationAPI.save(channelConfig.id, values);
+                            toast.success(`${channelConfig.name} configuration saved`);
+                        } catch (err) {
+                            toast.error(`Failed to save: ${err.message}`);
+                        }
+                    },
+                    onTest: async (values) => {
+                        try {
+                            await NotificationAPI.test(channelConfig.id, values);
+                            toast.success('Test notification sent!');
+                        } catch (err) {
+                            toast.error(`Test failed: ${err.message}`);
+                        }
+                    },
+                    onToggle: (enabled) => {
+                        // Toggle is saved when form is saved
+                    }
+                });
+            });
+
+            return container;
+        }
+
+        // Show settings modal
+        function showSettingsModal() {
+            if (!auth.isAdmin()) {
+                toast.warning('Admin access required');
+                return;
+            }
+
+            const modal = new SettingsModal({
+                defaultSection: 'users',
+                sections: [
+                    {
+                        id: 'general',
+                        label: 'General',
+                        icon: '<i class="sf-icon sf-icon-settings"></i>',
+                        content: '<p style="color: var(--sf-text-muted);">General settings coming soon...</p>'
+                    },
+                    {
+                        id: 'users',
+                        label: 'Users',
+                        icon: '<i class="sf-icon sf-icon-users"></i>',
+                        content: createUsersSection
+                    },
+                    {
+                        id: 'notifications',
+                        label: 'Notifications',
+                        icon: '<i class="sf-icon sf-icon-notifications"></i>',
+                        content: createNotificationsSection
+                    }
+                ]
+            });
+            modal.open();
+        }
+
+        // Show logs modal
+        async function showLogsModal() {
+            if (!auth.isAdmin()) {
+                toast.warning('Admin access required');
+                return;
+            }
+
+            // Fetch logs from server
+            let entries = [];
+            try {
+                const res = await auth.fetch('/api/logs?limit=100');
+                if (res.ok) {
+                    entries = await res.json();
+                }
+            } catch (err) {
+                console.error('Failed to fetch logs:', err);
+            }
+
+            const modal = new LogsModal({
+                entries: entries.map(e => ({
+                    timestamp: e.timestamp,
+                    level: e.level,
+                    message: e.message
+                }))
+            });
+            modal.open();
+        }
+
+        // Handle logout
+        function handleLogout() {
+            toast.logout(() => {
+                auth.logout();
+                window.location.reload();
+            });
+        }
+    </script>
+</body>
+</html>
