@@ -16,14 +16,15 @@
  *
  *   // Logout
  *   auth.logout();
+ *
+ * Token is stored in an httpOnly cookie (set by the server).
+ * Only user display info is kept in localStorage.
  */
 
-const TOKEN_KEY = 'sf_auth_token';
 const USER_KEY = 'sf_auth_user';
 
 class AuthManager {
   constructor() {
-    this.token = localStorage.getItem(TOKEN_KEY);
     this.user = JSON.parse(localStorage.getItem(USER_KEY) || 'null');
     this.onAuthChange = null;
   }
@@ -37,7 +38,8 @@ class AuthManager {
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password })
+        body: JSON.stringify({ username, password }),
+        credentials: 'same-origin'
       });
 
       const data = await response.json();
@@ -46,10 +48,8 @@ class AuthManager {
         return { success: false, error: data.error || 'Login failed' };
       }
 
-      // Store token and user
-      this.token = data.token;
+      // Store user info (token is in httpOnly cookie)
       this.user = data.user;
-      localStorage.setItem(TOKEN_KEY, data.token);
       localStorage.setItem(USER_KEY, JSON.stringify(data.user));
 
       // Notify listeners
@@ -57,7 +57,11 @@ class AuthManager {
         this.onAuthChange(true, this.user);
       }
 
-      return { success: true, user: data.user };
+      const result = { success: true, user: data.user };
+      if (data.mustChangePassword) {
+        result.mustChangePassword = true;
+      }
+      return result;
     } catch (err) {
       console.error('Login error:', err);
       return { success: false, error: 'Network error' };
@@ -69,23 +73,17 @@ class AuthManager {
    */
   async logout() {
     try {
-      if (this.token) {
-        await fetch('/api/auth/logout', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${this.token}`
-          }
-        });
-      }
+      await fetch('/api/auth/logout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin'
+      });
     } catch (err) {
       console.error('Logout error:', err);
     }
 
     // Clear local state
-    this.token = null;
     this.user = null;
-    localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(USER_KEY);
 
     // Notify listeners
@@ -98,7 +96,7 @@ class AuthManager {
    * Check if user is logged in
    */
   isLoggedIn() {
-    return !!this.token;
+    return !!this.user;
   }
 
   /**
@@ -116,14 +114,8 @@ class AuthManager {
   }
 
   /**
-   * Get auth token
-   */
-  getToken() {
-    return this.token;
-  }
-
-  /**
-   * Make authenticated API request
+   * Make authenticated API request.
+   * Token is sent automatically via httpOnly cookie.
    */
   async fetch(url, options = {}) {
     const headers = {
@@ -131,18 +123,19 @@ class AuthManager {
       ...options.headers
     };
 
-    if (this.token) {
-      headers['Authorization'] = `Bearer ${this.token}`;
-    }
-
     const response = await fetch(url, {
       ...options,
-      headers
+      headers,
+      credentials: 'same-origin'
     });
 
-    // Handle 401 - token expired
+    // Handle 401 - token expired or invalid
     if (response.status === 401) {
-      this.logout();
+      this.user = null;
+      localStorage.removeItem(USER_KEY);
+      if (this.onAuthChange) {
+        this.onAuthChange(false, null);
+      }
     }
 
     return response;
@@ -152,7 +145,7 @@ class AuthManager {
    * Refresh current user info from server
    */
   async refreshUser() {
-    if (!this.token) return null;
+    if (!this.user) return null;
 
     try {
       const response = await this.fetch('/api/auth/me');

@@ -22,8 +22,18 @@ router.get('/', auth.requireAdmin, (req, res) => {
   }
 });
 
+const SETTINGS_KEY_PATTERN = /^[a-zA-Z0-9._-]+$/;
+const BLOCKED_KEYS = ['__proto__', 'constructor', 'prototype'];
+
 router.put('/', auth.requireAdmin, (req, res) => {
   const updates = req.body;
+
+  // Validate keys against prototype pollution and invalid patterns
+  for (const key of Object.keys(updates)) {
+    if (BLOCKED_KEYS.includes(key) || key.startsWith('__') || !SETTINGS_KEY_PATTERN.test(key)) {
+      return res.status(400).json({ error: `Invalid setting key: ${key}` });
+    }
+  }
 
   try {
     for (const [key, value] of Object.entries(updates)) {

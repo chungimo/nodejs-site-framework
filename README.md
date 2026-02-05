@@ -2,6 +2,14 @@
 
 A drop-in Node.js framework providing authentication, user management, settings, logging, and notification channels. Copy the `src/site-framework/` and `public/site-framework/` folders into any Express project and wire up in minutes.
 
+## Screenshots
+
+<img src="docs/imgs/example-main_page.png" alt="Main Page" width="600">
+
+<img src="docs/imgs/example-settings_users.png" alt="Settings - Users" width="600">
+
+<img src="docs/imgs/example-settings_notifications.png" alt="Settings - Notifications" width="600">
+
 ---
 
 ## Agent Integration Guide
@@ -25,7 +33,7 @@ This gives you:
 | Export | Type | What it is | Key methods |
 |--------|------|------------|-------------|
 | `db` | Object | Full database module | `getDatabase()`, `DB_PATH`, `encryption` |
-| `users` | Object | User CRUD | `getAll()`, `getById(id)`, `getByUsername(name)`, `create(name, pass, isAdmin)`, `update(id, updates)`, `delete(id)`, `verifyPassword(user, pass)`, `generateApiKey(id)`, `revokeApiKey(id)` |
+| `users` | Object | User CRUD | `getAll()`, `getById(id)`, `getFullById(id)`, `getByUsername(name)`, `create(name, pass, isAdmin)` *(async)*, `update(id, updates)` *(async)*, `delete(id)`, `verifyPassword(user, pass)` *(async)*, `generateApiKey(id)`, `revokeApiKey(id)`, `clearMustChangePassword(id)` |
 | `sessions` | Object | JWT session tracking | `create(userId, tokenId, expiresAt)`, `isValid(tokenId)`, `revoke(tokenId)`, `revokeAllForUser(userId)`, `cleanup()` |
 | `logs` | Object | Application logging | `add(level, message, userId?, metadata?)`, `getRecent(limit?, level?)`, `clearOld(days?)`, `clearAll()` |
 | `settings` | Object | Key-value store | `get(key, default?)`, `set(key, value)`, `getAll()` |
@@ -43,12 +51,13 @@ import { auth, toast, SettingsModal, createUsersSection } from './site-framework
 | `Modal`, `ConfirmModal`, `getOpenModalCount` | Base modal system with z-index stacking, keyboard navigation, dirty-form detection |
 | `SettingsModal` | Fullscreen modal with left sidebar for section navigation |
 | `LogsModal` | Terminal-style log viewer with level filtering |
-| `LoginModal` | Username/password login dialog |
+| `LoginModal` | Username/password login dialog (triggers forced password change when required) |
+| `ChangePasswordModal` | Non-closable forced password change dialog |
 | `AccountModal` | Self-service account settings (password change, API key management) |
 | `UserModal` | Admin user create/edit dialog |
 | `createUsersSection`, `refreshUsers` | User management table for embedding in SettingsModal |
 | `createNotificationsSection` | Notification channel config UI for embedding in SettingsModal |
-| `auth` | Auth manager: `login(user, pass)`, `logout()`, `isLoggedIn()`, `isAdmin()`, `fetch(url, opts)`, `getUser()`, `getToken()` |
+| `auth` | Auth manager: `login(user, pass)`, `logout()`, `isLoggedIn()`, `isAdmin()`, `fetch(url, opts)`, `getUser()`, `refreshUser()` |
 | `toast` | Toast notifications: `info(msg)`, `success(msg)`, `warning(msg)`, `error(msg)`, `logout(callback, delay)` |
 | `createField`, `validateField`, `validateForm`, `getFormValues`, `isFormDirty`, `setFieldError`, `clearFieldError`, `getFieldValue`, `setFieldValue` | IFTA-style form field creation and validation |
 | `Table` | Sortable data table component |
@@ -117,6 +126,10 @@ myChannel: {
 
 ```javascript
 async function sendMyChannel(config, message) {
+  // SSRF validation is required for any user-provided URL
+  const urlCheck = await validateWebhookUrl(config.endpoint);
+  if (!urlCheck.valid) return { success: false, error: urlCheck.reason };
+
   const response = await fetch(config.endpoint, {
     method: 'POST',
     headers: { 'Authorization': `Bearer ${config.apiKey}`, 'Content-Type': 'application/json' },
@@ -127,11 +140,12 @@ async function sendMyChannel(config, message) {
 }
 ```
 
-3. Add the case to `sendTestNotification()` in the same file.
+3. Add the channel type to the `VALID_CHANNEL_TYPES` array in the same file.
+4. Add the case to `sendTestNotification()` in the same file.
 
 ### Critical patterns to follow
 
-- **All API calls from the frontend must use `auth.fetch()`**, not raw `fetch()`. This ensures the auth token is attached and 401 responses trigger auto-logout.
+- **All API calls from the frontend must use `auth.fetch()`**, not raw `fetch()`. This ensures cookies are sent (`credentials: 'same-origin'`) and 401 responses trigger auto-logout.
 - **All database access goes through the DAO modules** (`users`, `sessions`, `logs`, `settings`, `notificationChannels`). Never call `getDatabase()` directly from route handlers.
 - **Never store sensitive values in plaintext**. Use `encryption.encrypt()` / `encryption.decrypt()` from `db/encryption.js`.
 - **Log security-relevant actions** (login, logout, API key generation, user changes) via `logs.add()` with the acting user's ID.
@@ -143,7 +157,7 @@ async function sendMyChannel(config, message) {
 ### 1. Install dependencies
 
 ```bash
-npm install express better-sqlite3 bcrypt jsonwebtoken cookie-parser dotenv
+npm install express better-sqlite3 bcrypt jsonwebtoken cookie-parser dotenv helmet cors
 ```
 
 ### 2. Copy the framework
@@ -157,14 +171,46 @@ Copy these directories into your project:
 ```javascript
 const express = require('express');
 const cookieParser = require('cookie-parser');
+const helmet = require('helmet');
+const cors = require('cors');
 require('dotenv').config();
 
 const framework = require('./site-framework');
 const app = express();
 
+// Trust proxy (set TRUST_PROXY env var when behind a reverse proxy)
+if (process.env.TRUST_PROXY) {
+    app.set('trust proxy', process.env.TRUST_PROXY);
+}
+
+// Security headers
+app.use(helmet({
+    contentSecurityPolicy: {
+        directives: {
+            defaultSrc: ["'self'"],
+            scriptSrc: ["'self'"],
+            styleSrc: ["'self'", "'unsafe-inline'"],
+            imgSrc: ["'self'", "data:"],
+            connectSrc: ["'self'"]
+        }
+    }
+}));
+
+// CORS
+app.use(cors({
+    origin: process.env.CORS_ORIGIN || true,
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    allowedHeaders: ['Content-Type', 'X-Api-Key']
+}));
+
 app.use(express.json());
 app.use(cookieParser());
 app.use('/api', framework.routes);
+
+// Session cleanup (startup + hourly)
+framework.sessions.cleanup();
+setInterval(() => framework.sessions.cleanup(), 60 * 60 * 1000);
 ```
 
 ### 4. Include the frontend
@@ -183,13 +229,16 @@ import { auth, toast, LoginModal, SettingsModal } from './site-framework/js/inde
 ### 5. Set environment variables
 
 ```bash
-JWT_SECRET=your-secret-key        # Required for production
+JWT_SECRET=your-secret-key        # Required for production (auto-generated if not set)
 JWT_EXPIRY=24h                    # Token lifetime (default: 24h)
-ENCRYPTION_KEY=your-32-char-key   # For encrypting sensitive fields
+ENCRYPTION_KEY=your-passphrase    # For encrypting sensitive fields (auto-generated to db/.encryption-key if not set)
 PORT=3000                         # Server port (default: 3000)
+TRUST_PROXY=1                     # Set when behind a reverse proxy (uses Express trust proxy)
+CORS_ORIGIN=https://example.com   # Allowed CORS origin (defaults to reflecting origin)
+NODE_ENV=production               # Enables HTTPS-only webhooks and secure cookies
 ```
 
-The database initializes itself on first run at `db/app.db` with a default admin user (`admin` / `admin`).
+The database initializes itself on first run at `db/app.db` with a default admin user (`admin` / `admin`). A password change is required on first login.
 
 ---
 
@@ -210,7 +259,7 @@ src/site-framework/
 │   └── encryption.js         # AES-256-CBC utilities
 └── routes/
     ├── index.js              # Router aggregator
-    ├── auth.js               # POST login/logout/refresh, GET me
+    ├── auth.js               # POST login/logout/refresh/change-password, GET me
     ├── account.js            # Self-service account + API key
     ├── users.js              # Admin user CRUD
     ├── logs.js               # Admin log management
@@ -234,6 +283,7 @@ public/site-framework/
     ├── field.js              # Form field utilities
     ├── menu.js               # Hamburger menu component
     ├── loginModal.js         # Login dialog
+    ├── changePasswordModal.js # Forced password change dialog
     ├── accountModal.js       # Account settings modal
     ├── userModal.js          # Admin user edit modal
     ├── usersSection.js       # Users management table
@@ -248,23 +298,24 @@ public/site-framework/
 
 ## API Endpoints
 
-All endpoints are prefixed with `/api`. Authentication is via `Authorization: Bearer <token>` header or `X-Api-Key: <key>` header.
+All endpoints are prefixed with `/api`. Authentication is via httpOnly cookie (set on login) or `X-Api-Key: <key>` header.
 
 ### Authentication
 
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
-| POST | `/api/auth/login` | None | Login with `{ username, password }`, returns `{ token, expiresAt, user }` |
-| POST | `/api/auth/logout` | Token | Revoke current session |
-| POST | `/api/auth/refresh` | Token | Get new token (revokes old) |
+| POST | `/api/auth/login` | None | Login with `{ username, password }`, sets httpOnly cookie, returns `{ expiresAt, user }` |
+| POST | `/api/auth/logout` | Token | Revoke current session, clears cookie |
+| POST | `/api/auth/refresh` | Token | Refresh token (sets new cookie) |
 | GET | `/api/auth/me` | Token | Get current user info |
+| POST | `/api/auth/change-password` | Token | Forced password change (`{ currentPassword, newPassword }`) |
 
 ### Account (self-service)
 
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
 | GET | `/api/account` | Token | Get own account info |
-| PUT | `/api/account` | Token | Update own username/password (`{ username?, currentPassword, newPassword }`) |
+| PUT | `/api/account` | Token | Update own username/password (`{ username?, currentPassword, newPassword }`) -- `currentPassword` required for all changes |
 | POST | `/api/account/api-key` | Token | Generate/regenerate API key (returns plaintext once) |
 | DELETE | `/api/account/api-key` | Token | Revoke own API key |
 
@@ -327,12 +378,12 @@ Edit `public/site-framework/css/variables.css` to restyle everything. All framew
 
 SQLite, auto-created at `db/app.db` on first run. The `db/` folder is gitignored.
 
-**Default admin:** `admin` / `admin` -- change in production.
+**Default admin:** `admin` / `admin` -- a forced password change is required on first login.
 
 ### Schema
 
 ```
-users          (id, username, password_hash, api_key, api_key_last_four, api_key_created_at, is_admin, created_at, last_login)
+users          (id, username, password_hash, api_key, api_key_last_four, api_key_created_at, is_admin, must_change_password, created_at, last_login)
 sessions       (id, user_id, token_id, created_at, expires_at, revoked)
 logs           (id, timestamp, level, message, user_id, metadata)
 settings       (key, value, updated_at)
@@ -347,9 +398,17 @@ notification_channels (id, channel_type, enabled, config, created_at, updated_at
 
 | Mechanism | Details |
 |-----------|---------|
-| Password hashing | bcrypt, 12 rounds |
-| Session tokens | JWT with configurable expiry, tracked in DB for revocation |
+| Password hashing | bcrypt, 12 rounds (async) |
+| Password policy | Minimum 8 characters, forced change on first login for default admin |
+| Token storage | JWT stored in `httpOnly`, `Secure`, `SameSite=Strict` cookie (not accessible to JavaScript) |
+| Session tokens | JWT with configurable expiry, tracked in DB for revocation, hourly cleanup |
+| Stale claims | JWT auth verifies current role from database on every request |
 | API keys | SHA-256 hashed before storage, only last 4 chars stored for display |
-| Sensitive data | AES-256-CBC encryption for notification channel secrets |
+| Sensitive data | AES-256-CBC encryption with PBKDF2 key derivation; auto-generated key if not configured |
+| Security headers | Helmet middleware (CSP, X-Frame-Options, HSTS, X-Content-Type-Options, Referrer-Policy) |
+| CORS | Configurable origin, credentials support for cookie auth |
+| SSRF protection | Webhook URLs validated against private IP ranges with DNS resolution; HTTPS required in production |
+| XSS prevention | HTML escaping on toast notifications and user-rendered content |
+| Log sanitization | Control characters stripped from user input in log messages |
 | Auth middleware | `authenticate` (passive), `requireAuth` (401), `requireAdmin` (403) |
-| IP logging | Client IP logged on login, logout, and API key operations |
+| IP logging | Client IP via Express `trust proxy` on login, logout, and API key operations |

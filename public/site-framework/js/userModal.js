@@ -88,8 +88,8 @@ export class UserModal extends Modal {
       type: 'password',
       required: !this.isEdit,
       validate: (val) => {
-        if (!this.isEdit && val.length < 6) return 'Password must be at least 6 characters';
-        if (this.isEdit && val && val.length < 6) return 'Password must be at least 6 characters';
+        if (!this.isEdit && val.length < 8) return 'Password must be at least 8 characters';
+        if (this.isEdit && val && val.length < 8) return 'Password must be at least 8 characters';
         return true;
       }
     });

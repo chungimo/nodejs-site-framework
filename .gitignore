@@ -2,9 +2,11 @@
 node_modules/
 
 # Database
-db/
+db/app.db
+db/.encryption-key
 
 # Environment
+docs_internal/
 .env
 
 # Logs

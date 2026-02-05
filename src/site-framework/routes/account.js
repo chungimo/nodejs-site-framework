@@ -44,7 +44,7 @@ router.get('/', auth.requireAuth, (req, res) => {
   }
 });
 
-router.put('/', auth.requireAuth, (req, res) => {
+router.put('/', auth.requireAuth, async (req, res) => {
   const { username, currentPassword, newPassword } = req.body;
   const userId = req.user.id;
 
@@ -52,6 +52,14 @@ router.put('/', auth.requireAuth, (req, res) => {
     const user = users.getByUsername(req.user.username);
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Require current password for any account modification
+    if (!currentPassword) {
+      return res.status(400).json({ error: 'Current password is required' });
+    }
+    if (!(await users.verifyPassword(user, currentPassword))) {
+      return res.status(401).json({ error: 'Current password is incorrect' });
     }
 
     const updates = {};
@@ -68,14 +76,8 @@ router.put('/', auth.requireAuth, (req, res) => {
     }
 
     if (newPassword) {
-      if (!currentPassword) {
-        return res.status(400).json({ error: 'Current password is required' });
-      }
-      if (!users.verifyPassword(user, currentPassword)) {
-        return res.status(401).json({ error: 'Current password is incorrect' });
-      }
-      if (newPassword.length < 6) {
-        return res.status(400).json({ error: 'New password must be at least 6 characters' });
+      if (newPassword.length < 8) {
+        return res.status(400).json({ error: 'New password must be at least 8 characters' });
       }
       updates.password = newPassword;
     }
@@ -84,7 +86,7 @@ router.put('/', auth.requireAuth, (req, res) => {
       return res.status(400).json({ error: 'No changes provided' });
     }
 
-    users.update(userId, updates);
+    await users.update(userId, updates);
     logs.add('info', `Account updated by user: ${user.username}`, userId);
 
     res.json({ success: true, username: updates.username || user.username });

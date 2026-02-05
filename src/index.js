@@ -13,6 +13,8 @@
 const express = require('express');
 const path = require('path');
 const cookieParser = require('cookie-parser');
+const helmet = require('helmet');
+const cors = require('cors');
 require('dotenv').config();
 
 // Import site framework
@@ -20,6 +22,32 @@ const framework = require('./site-framework');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// Trust proxy configuration
+if (process.env.TRUST_PROXY) {
+    app.set('trust proxy', process.env.TRUST_PROXY);
+}
+
+// Security headers
+app.use(helmet({
+    contentSecurityPolicy: {
+        directives: {
+            defaultSrc: ["'self'"],
+            scriptSrc: ["'self'"],
+            styleSrc: ["'self'", "'unsafe-inline'"],
+            imgSrc: ["'self'", "data:"],
+            connectSrc: ["'self'"]
+        }
+    }
+}));
+
+// CORS
+app.use(cors({
+    origin: process.env.CORS_ORIGIN || true,
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    allowedHeaders: ['Content-Type', 'X-Api-Key']
+}));
 
 // Middleware
 app.use(express.json());
@@ -56,6 +84,10 @@ app.use((err, req, res, next) => {
     });
 });
 
+// Session cleanup on startup and hourly
+framework.sessions.cleanup();
+setInterval(() => framework.sessions.cleanup(), 60 * 60 * 1000);
+
 // Start server
 app.listen(PORT, () => {
     console.log('');
@@ -63,10 +95,6 @@ app.listen(PORT, () => {
     console.log('  Site Framework Server');
     console.log('='.repeat(50));
     console.log(`  URL: http://localhost:${PORT}`);
-    console.log('');
-    console.log('  Default login:');
-    console.log('    Username: admin');
-    console.log('    Password: admin');
     console.log('');
     console.log('  Press Ctrl+C to stop');
     console.log('='.repeat(50));

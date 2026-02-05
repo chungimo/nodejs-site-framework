@@ -106,7 +106,7 @@ export class AccountModal extends Modal {
       type: 'password',
       required: true,
       validate: (val) => {
-        if (val.length < 6) return 'Password must be at least 6 characters';
+        if (val.length < 8) return 'Password must be at least 8 characters';
         return true;
       }
     });

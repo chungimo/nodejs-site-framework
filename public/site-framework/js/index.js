@@ -35,6 +35,7 @@ export { LogsModal } from './logs.js';
 export { LoginModal } from './loginModal.js';
 export { AccountModal } from './accountModal.js';
 export { UserModal } from './userModal.js';
+export { ChangePasswordModal } from './changePasswordModal.js';
 
 // Settings section helpers
 export { createUsersSection, refreshUsers } from './usersSection.js';

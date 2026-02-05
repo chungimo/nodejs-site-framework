@@ -40,6 +40,33 @@ if (!process.env.JWT_SECRET) {
   console.log('[AUTH] WARNING: Using generated JWT secret. Set JWT_SECRET env var for production.');
 }
 
+// Cookie options for httpOnly token storage
+function getCookieOptions() {
+  return {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict',
+    path: '/'
+  };
+}
+
+/**
+ * Parse JWT_EXPIRY string (e.g. '24h', '7d', '30m') to milliseconds
+ */
+function parseExpiryMs(expiry) {
+  const match = expiry.match(/^(\d+)(s|m|h|d)$/);
+  if (!match) return 24 * 60 * 60 * 1000; // default 24h
+  const num = parseInt(match[1]);
+  const unit = match[2];
+  switch (unit) {
+    case 's': return num * 1000;
+    case 'm': return num * 60 * 1000;
+    case 'h': return num * 60 * 60 * 1000;
+    case 'd': return num * 24 * 60 * 60 * 1000;
+    default: return 24 * 60 * 60 * 1000;
+  }
+}
+
 // ============================================
 // Token Functions
 // ============================================
@@ -134,14 +161,18 @@ function authenticate(req, res, next) {
   if (token) {
     const decoded = verifyToken(token);
     if (decoded) {
-      req.user = {
-        id: decoded.sub,
-        username: decoded.username,
-        isAdmin: decoded.isAdmin,
-        tokenId: decoded.jti,
-        authMethod: 'jwt'
-      };
-      return next();
+      // Verify user still exists and get current role from database
+      const dbUser = users.getById(decoded.sub);
+      if (dbUser) {
+        req.user = {
+          id: dbUser.id,
+          username: dbUser.username,
+          isAdmin: dbUser.is_admin === 1,
+          tokenId: decoded.jti,
+          authMethod: 'jwt'
+        };
+        return next();
+      }
     }
   }
 
@@ -179,50 +210,15 @@ function requireAdmin(req, res, next) {
 // ============================================
 
 /**
- * Extract IPv4 from an IP string
- * Handles IPv6-mapped IPv4 addresses like ::ffff:192.168.1.1
- */
-function extractIPv4(ip) {
-  if (!ip) return null;
-  // Check for IPv6-mapped IPv4 (::ffff:x.x.x.x)
-  const ipv4Mapped = ip.match(/::ffff:(\d+\.\d+\.\d+\.\d+)/i);
-  if (ipv4Mapped) return ipv4Mapped[1];
-  // Check if already IPv4
-  if (/^\d+\.\d+\.\d+\.\d+$/.test(ip)) return ip;
-  return null;
-}
-
-/**
- * Get client IP address from request
- * Prefers IPv4 addresses when available
+ * Get client IP address from request.
+ * Uses Express's req.ip which respects the 'trust proxy' setting.
+ * Configure app.set('trust proxy', ...) to match your deployment topology.
  */
 function getClientIP(req) {
-  const candidates = [];
-
-  // Check X-Forwarded-For header (for proxied requests)
-  const forwarded = req.headers['x-forwarded-for'];
-  if (forwarded) {
-    // Collect all IPs from the header
-    forwarded.split(',').forEach(ip => candidates.push(ip.trim()));
-  }
-
-  // Check X-Real-IP header
-  if (req.headers['x-real-ip']) {
-    candidates.push(req.headers['x-real-ip']);
-  }
-
-  // Add Express's ip and socket remote address
-  if (req.ip) candidates.push(req.ip);
-  if (req.connection?.remoteAddress) candidates.push(req.connection.remoteAddress);
-
-  // First, try to find an IPv4 address
-  for (const ip of candidates) {
-    const ipv4 = extractIPv4(ip);
-    if (ipv4) return ipv4;
-  }
-
-  // Fallback to first candidate or unknown
-  return candidates[0] || 'unknown';
+  const ip = req.ip || 'unknown';
+  // Extract IPv4 from IPv6-mapped addresses (::ffff:x.x.x.x)
+  const mapped = ip.match(/::ffff:(\d+\.\d+\.\d+\.\d+)/i);
+  return mapped ? mapped[1] : ip;
 }
 
 /**
@@ -230,7 +226,7 @@ function getClientIP(req) {
  * POST /api/auth/login
  * Body: { username, password }
  */
-function login(req, res) {
+async function login(req, res) {
   const { username, password } = req.body;
   const clientIP = getClientIP(req);
 
@@ -240,7 +236,7 @@ function login(req, res) {
 
   const user = users.getByUsername(username);
 
-  if (!user || !users.verifyPassword(user, password)) {
+  if (!user || !(await users.verifyPassword(user, password))) {
     logs.add('warn', `Failed login attempt for username: ${username} from IP: ${clientIP}`);
     return res.status(401).json({ error: 'Invalid credentials' });
   }
@@ -248,21 +244,33 @@ function login(req, res) {
   // Generate token
   const { token, expiresAt } = generateToken(user);
 
+  // Set httpOnly cookie
+  res.cookie('token', token, {
+    ...getCookieOptions(),
+    maxAge: parseExpiryMs(JWT_EXPIRY)
+  });
+
   // Update last login
   users.updateLastLogin(user.id);
 
   // Log successful login with IP
   logs.add('info', `User logged in: ${username} from IP: ${clientIP}`, user.id);
 
-  res.json({
-    token,
+  const response = {
     expiresAt,
     user: {
       id: user.id,
       username: user.username,
       isAdmin: user.is_admin === 1
     }
-  });
+  };
+
+  // Flag if password change is required
+  if (user.must_change_password) {
+    response.mustChangePassword = true;
+  }
+
+  res.json(response);
 }
 
 /**
@@ -276,6 +284,7 @@ function logout(req, res) {
     logs.add('info', `User logged out: ${req.user.username} from IP: ${clientIP}`, req.user.id);
   }
 
+  res.clearCookie('token', getCookieOptions());
   res.json({ success: true });
 }
 
@@ -325,7 +334,13 @@ function refreshToken(req, res) {
   // Generate new token
   const { token, expiresAt } = generateToken(user);
 
-  res.json({ token, expiresAt });
+  // Set httpOnly cookie
+  res.cookie('token', token, {
+    ...getCookieOptions(),
+    maxAge: parseExpiryMs(JWT_EXPIRY)
+  });
+
+  res.json({ expiresAt });
 }
 
 // ============================================
@@ -350,7 +365,6 @@ module.exports = {
   extractToken,
   getClientIP,
 
-  // Config (for testing)
-  JWT_SECRET,
+  // Config
   JWT_EXPIRY
 };

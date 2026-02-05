@@ -11,9 +11,74 @@
  */
 
 const express = require('express');
+const dns = require('dns');
 const router = express.Router();
 const auth = require('../auth');
 const { logs, notificationChannels } = require('../db');
+
+// ============================================
+// Validation
+// ============================================
+
+const VALID_CHANNEL_TYPES = ['teams', 'slack', 'discord', 'email', 'webhook'];
+
+function validateChannelType(req, res, next) {
+  if (!VALID_CHANNEL_TYPES.includes(req.params.type)) {
+    return res.status(400).json({ error: `Invalid channel type. Must be one of: ${VALID_CHANNEL_TYPES.join(', ')}` });
+  }
+  next();
+}
+
+/**
+ * Validate a webhook URL to prevent SSRF attacks.
+ * - Requires https in production (http allowed in development)
+ * - Blocks private/reserved IP ranges after DNS resolution
+ */
+async function validateWebhookUrl(url) {
+  let parsed;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return { valid: false, reason: 'Invalid URL format' };
+  }
+
+  // Require HTTPS in production
+  const isDev = process.env.NODE_ENV === 'development';
+  if (!isDev && parsed.protocol !== 'https:') {
+    return { valid: false, reason: 'Webhook URLs must use HTTPS' };
+  }
+  if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
+    return { valid: false, reason: 'Invalid URL protocol' };
+  }
+
+  // Resolve hostname and check for private IPs
+  try {
+    const { address } = await dns.promises.lookup(parsed.hostname);
+    if (isPrivateIP(address)) {
+      return { valid: false, reason: 'Webhook URLs cannot target private or reserved IP addresses' };
+    }
+  } catch {
+    return { valid: false, reason: `Cannot resolve hostname: ${parsed.hostname}` };
+  }
+
+  return { valid: true };
+}
+
+function isPrivateIP(ip) {
+  // IPv4 private/reserved ranges
+  const parts = ip.split('.').map(Number);
+  if (parts.length === 4) {
+    if (parts[0] === 10) return true;                                      // 10.0.0.0/8
+    if (parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31) return true; // 172.16.0.0/12
+    if (parts[0] === 192 && parts[1] === 168) return true;                 // 192.168.0.0/16
+    if (parts[0] === 127) return true;                                      // 127.0.0.0/8
+    if (parts[0] === 169 && parts[1] === 254) return true;                 // 169.254.0.0/16
+    if (parts[0] === 0) return true;                                        // 0.0.0.0/8
+  }
+  // IPv6 loopback and private
+  if (ip === '::1' || ip.startsWith('fc') || ip.startsWith('fd') || ip.startsWith('fe80')) return true;
+  return false;
+}
 
 // ============================================
 // Channel CRUD
@@ -29,7 +94,7 @@ router.get('/channels', auth.requireAdmin, (req, res) => {
   }
 });
 
-router.get('/channels/:type', auth.requireAdmin, (req, res) => {
+router.get('/channels/:type', auth.requireAdmin, validateChannelType, (req, res) => {
   try {
     const channel = notificationChannels.get(req.params.type);
     if (!channel) {
@@ -42,7 +107,7 @@ router.get('/channels/:type', auth.requireAdmin, (req, res) => {
   }
 });
 
-router.put('/channels/:type', auth.requireAdmin, (req, res) => {
+router.put('/channels/:type', auth.requireAdmin, validateChannelType, (req, res) => {
   const { enabled, ...config } = req.body;
 
   try {
@@ -55,7 +120,7 @@ router.put('/channels/:type', auth.requireAdmin, (req, res) => {
   }
 });
 
-router.delete('/channels/:type', auth.requireAdmin, (req, res) => {
+router.delete('/channels/:type', auth.requireAdmin, validateChannelType, (req, res) => {
   try {
     notificationChannels.delete(req.params.type);
     logs.add('info', `Notification channel deleted: ${req.params.type}`, req.user.id);
@@ -70,7 +135,7 @@ router.delete('/channels/:type', auth.requireAdmin, (req, res) => {
 // Test Notifications
 // ============================================
 
-router.post('/channels/:type/test', auth.requireAdmin, async (req, res) => {
+router.post('/channels/:type/test', auth.requireAdmin, validateChannelType, async (req, res) => {
   const channelType = req.params.type;
 
   try {
@@ -127,6 +192,9 @@ async function sendTeams(config, message) {
     return { success: false, error: 'Webhook URL not configured' };
   }
 
+  const urlCheck = await validateWebhookUrl(config.webhookUrl);
+  if (!urlCheck.valid) return { success: false, error: urlCheck.reason };
+
   try {
     const payload = {
       '@type': 'MessageCard',
@@ -156,6 +224,9 @@ async function sendSlack(config, message) {
     return { success: false, error: 'Webhook URL not configured' };
   }
 
+  const urlCheck = await validateWebhookUrl(config.webhookUrl);
+  if (!urlCheck.valid) return { success: false, error: urlCheck.reason };
+
   try {
     const payload = { text: `*${message.title}*\n${message.text}` };
     if (config.channel) payload.channel = config.channel;
@@ -179,6 +250,9 @@ async function sendDiscord(config, message) {
   if (!config.webhookUrl) {
     return { success: false, error: 'Webhook URL not configured' };
   }
+
+  const urlCheck = await validateWebhookUrl(config.webhookUrl);
+  if (!urlCheck.valid) return { success: false, error: urlCheck.reason };
 
   try {
     const payload = {
@@ -246,6 +320,9 @@ async function sendWebhook(config, message) {
   if (!config.webhookUrl) {
     return { success: false, error: 'Webhook URL not configured' };
   }
+
+  const urlCheck = await validateWebhookUrl(config.webhookUrl);
+  if (!urlCheck.valid) return { success: false, error: urlCheck.reason };
 
   try {
     const headers = { 'Content-Type': 'application/json' };

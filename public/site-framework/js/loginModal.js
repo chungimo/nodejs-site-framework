@@ -15,6 +15,7 @@
 
 import { Modal } from './modal.js';
 import { auth } from './auth.js';
+import { ChangePasswordModal } from './changePasswordModal.js';
 
 export class LoginModal extends Modal {
   constructor(options = {}) {
@@ -81,7 +82,18 @@ export class LoginModal extends Modal {
 
     if (result.success) {
       this.close();
-      this.onLoginSuccess(result.user);
+
+      if (result.mustChangePassword) {
+        // Show forced password change modal before proceeding
+        const changePwModal = new ChangePasswordModal({
+          onComplete: () => {
+            this.onLoginSuccess(result.user);
+          }
+        });
+        changePwModal.open();
+      } else {
+        this.onLoginSuccess(result.user);
+      }
     } else {
       submitBtn.disabled = false;
       submitBtn.textContent = 'Login';

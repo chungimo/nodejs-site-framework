@@ -16,6 +16,11 @@ const router = express.Router();
 const auth = require('../auth');
 const { users, logs } = require('../db');
 
+function validatePassword(password) {
+  if (password.length < 8) return 'Password must be at least 8 characters';
+  return null;
+}
+
 router.get('/', auth.requireAdmin, (req, res) => {
   try {
     const allUsers = users.getAll();
@@ -26,7 +31,7 @@ router.get('/', auth.requireAdmin, (req, res) => {
   }
 });
 
-router.post('/', auth.requireAdmin, (req, res) => {
+router.post('/', auth.requireAdmin, async (req, res) => {
   const { username, password, isAdmin } = req.body;
 
   if (!username || !password) {
@@ -35,8 +40,9 @@ router.post('/', auth.requireAdmin, (req, res) => {
   if (username.length < 3) {
     return res.status(400).json({ error: 'Username must be at least 3 characters' });
   }
-  if (password.length < 6) {
-    return res.status(400).json({ error: 'Password must be at least 6 characters' });
+  const passwordError = validatePassword(password);
+  if (passwordError) {
+    return res.status(400).json({ error: passwordError });
   }
 
   try {
@@ -45,7 +51,7 @@ router.post('/', auth.requireAdmin, (req, res) => {
       return res.status(409).json({ error: 'Username already exists' });
     }
 
-    const user = users.create(username, password, isAdmin);
+    const user = await users.create(username, password, isAdmin);
     logs.add('info', `User created: ${username}`, req.user.id);
 
     res.status(201).json(user);
@@ -63,13 +69,24 @@ router.get('/:id', auth.requireAdmin, (req, res) => {
   res.json(user);
 });
 
-router.put('/:id', auth.requireAdmin, (req, res) => {
+router.put('/:id', auth.requireAdmin, async (req, res) => {
   const { username, password, isAdmin } = req.body;
   const userId = parseInt(req.params.id);
 
   const user = users.getById(userId);
   if (!user) {
     return res.status(404).json({ error: 'User not found' });
+  }
+
+  // Validate inputs
+  if (username !== undefined && username.length < 3) {
+    return res.status(400).json({ error: 'Username must be at least 3 characters' });
+  }
+  if (password !== undefined) {
+    const passwordError = validatePassword(password);
+    if (passwordError) {
+      return res.status(400).json({ error: passwordError });
+    }
   }
 
   // Prevent removing last admin
@@ -87,7 +104,7 @@ router.put('/:id', auth.requireAdmin, (req, res) => {
     if (password !== undefined) updates.password = password;
     if (isAdmin !== undefined) updates.isAdmin = isAdmin;
 
-    users.update(userId, updates);
+    await users.update(userId, updates);
     logs.add('info', `User updated: ${user.username}`, req.user.id);
 
     res.json({ success: true });

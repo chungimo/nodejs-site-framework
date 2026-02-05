@@ -57,11 +57,13 @@ class ToastManager {
 
     const toast = document.createElement('div');
     toast.className = `sf-toast sf-toast-${type}`;
+    const escapedTitle = options.title ? this._escapeHtml(options.title) : '';
+    const escapedMessage = this._escapeHtml(options.message);
     toast.innerHTML = `
       <span class="sf-toast-icon"><i class="sf-icon sf-icon-lg ${iconClasses[type]}"></i></span>
       <div class="sf-toast-content">
-        ${options.title ? `<div class="sf-toast-title">${options.title}</div>` : ''}
-        <div class="sf-toast-message">${options.message}</div>
+        ${escapedTitle ? `<div class="sf-toast-title">${escapedTitle}</div>` : ''}
+        <div class="sf-toast-message">${escapedMessage}</div>
       </div>
       <div class="sf-toast-progress" style="animation-duration: ${duration}ms"></div>
     `;
@@ -75,6 +77,13 @@ class ToastManager {
     }, duration);
 
     return toast;
+  }
+
+  _escapeHtml(str) {
+    if (!str) return '';
+    const div = document.createElement('div');
+    div.textContent = String(str);
+    return div.innerHTML;
   }
 
   _remove(toast) {
