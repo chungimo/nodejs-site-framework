@@ -1,20 +1,20 @@
 /**
- * Site Framework - Notification Channels Module
+ * Notification Channels Module
  * ============================================
  *
  * USAGE:
- *   import {
- *     CHANNEL_TYPES,
- *     getChannelConfig,
- *     getAllChannelTypes,
- *     NotificationChannelForm
- *   } from './site-framework/js/notifications/index.js';
+ *   import { CHANNEL_TYPES, NotificationAPI } from './notifications/index.js';
  *
- * This module provides:
- * - Channel type configurations (Teams, Email, Slack, Discord, Webhook)
- * - Form component for configuring notification channels
- * - Validation and sensitive field handling
+ * EXPORTS:
+ *   CHANNEL_TYPES              - Channel type definitions (Teams, Email, Slack, Discord, Webhook)
+ *   getChannelConfig(id)       - Get config for a specific channel type
+ *   getAllChannelTypes()        - Get all channel type definitions
+ *   isSensitiveField(type, f)  - Check if a field is sensitive
+ *   NotificationChannelForm    - Form component for channel configuration
+ *   NotificationAPI            - API client: getAll, get, save, test, delete
  */
+
+import { auth } from '../auth.js';
 
 // Re-export channel configurations
 export {
@@ -27,44 +27,23 @@ export {
 // Re-export form component
 export { NotificationChannelForm } from './forms.js';
 
-// API helper for notification endpoints
+// API client for notification endpoints (uses auth.fetch for consistency)
 export const NotificationAPI = {
-  /**
-   * Get all configured notification channels
-   */
   async getAll() {
-    const response = await fetch('/api/notifications/channels', {
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('sf_auth_token')}`
-      }
-    });
+    const response = await auth.fetch('/api/notifications/channels');
     if (!response.ok) throw new Error('Failed to fetch notification channels');
     return response.json();
   },
 
-  /**
-   * Get a specific channel configuration
-   */
   async get(channelType) {
-    const response = await fetch(`/api/notifications/channels/${channelType}`, {
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('sf_auth_token')}`
-      }
-    });
+    const response = await auth.fetch(`/api/notifications/channels/${channelType}`);
     if (!response.ok) throw new Error('Failed to fetch channel configuration');
     return response.json();
   },
 
-  /**
-   * Save channel configuration
-   */
   async save(channelType, config) {
-    const response = await fetch(`/api/notifications/channels/${channelType}`, {
+    const response = await auth.fetch(`/api/notifications/channels/${channelType}`, {
       method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('sf_auth_token')}`
-      },
       body: JSON.stringify(config)
     });
     if (!response.ok) {
@@ -74,16 +53,9 @@ export const NotificationAPI = {
     return response.json();
   },
 
-  /**
-   * Test a notification channel
-   */
   async test(channelType, config) {
-    const response = await fetch(`/api/notifications/channels/${channelType}/test`, {
+    const response = await auth.fetch(`/api/notifications/channels/${channelType}/test`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('sf_auth_token')}`
-      },
       body: JSON.stringify(config)
     });
     if (!response.ok) {
@@ -93,21 +65,11 @@ export const NotificationAPI = {
     return response.json();
   },
 
-  /**
-   * Delete a channel configuration
-   */
   async delete(channelType) {
-    const response = await fetch(`/api/notifications/channels/${channelType}`, {
-      method: 'DELETE',
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('sf_auth_token')}`
-      }
+    const response = await auth.fetch(`/api/notifications/channels/${channelType}`, {
+      method: 'DELETE'
     });
     if (!response.ok) throw new Error('Failed to delete channel configuration');
     return response.json();
   }
-};
-
-export default {
-  NotificationAPI
 };

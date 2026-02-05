@@ -11,25 +11,31 @@
  *   // Use authentication middleware
  *   app.get('/protected', framework.auth.requireAuth, handler);
  *
+ * EXPORTS:
+ *   db       - Raw database module (getDatabase, DB_PATH, encryption)
+ *   users    - User CRUD: getAll, getById, getByUsername, create, update, delete, verifyPassword, generateApiKey, revokeApiKey
+ *   sessions - Session tracking: create, isValid, revoke, revokeAllForUser, cleanup
+ *   logs     - Log storage: add, getRecent, clearOld, clearAll
+ *   settings - KV store: get, set, getAll
+ *   auth     - Middleware: authenticate, requireAuth, requireAdmin | Handlers: login, logout, getCurrentUser, refreshToken
+ *   routes   - Express router, mount at /api
+ *
  * INITIALIZATION:
- * The database is automatically initialized on first require.
- * Default admin user is created: admin/admin (change in production!)
+ *   The database is automatically initialized on first require.
+ *   Default admin user is created: admin/admin (change in production!)
  */
 
-const database = require('./database');
+const db = require('./db');
 const auth = require('./auth');
 const routes = require('./routes');
 
-// Initialize database on require
-database.getDatabase();
-
 module.exports = {
   // Database access
-  db: database,
-  users: database.users,
-  sessions: database.sessions,
-  logs: database.logs,
-  settings: database.settings,
+  db,
+  users: db.users,
+  sessions: db.sessions,
+  logs: db.logs,
+  settings: db.settings,
 
   // Authentication
   auth,

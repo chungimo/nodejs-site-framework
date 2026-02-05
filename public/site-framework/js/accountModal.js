@@ -57,9 +57,11 @@ export class AccountModal extends Modal {
         <div class="sf-account-section">
           <div class="sf-account-section-title">Change Password</div>
           <div id="password-fields-container"></div>
-          <button class="sf-btn sf-btn-secondary" id="save-password-btn" style="margin-top: 8px;">
-            Save Password
-          </button>
+          <div style="display: flex; justify-content: flex-end; margin-top: 8px;">
+            <button class="sf-btn sf-btn-secondary" id="save-password-btn">
+              Save Password
+            </button>
+          </div>
         </div>
 
         <!-- API Key Section -->

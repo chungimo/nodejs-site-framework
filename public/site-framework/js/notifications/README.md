@@ -1,180 +1,23 @@
-# Site Framework - Notification Channels
+# Notification Channels Module
 
-This module provides a complete notification channel configuration system for the site framework.
+Configurable notification system supporting Teams, Slack, Discord, Email (SMTP), and generic webhooks.
 
-## Supported Channels
+## For agents: how this module works
 
-- **Microsoft Teams** - Incoming Webhook integration
-- **Email (SMTP)** - SMTP relay for email notifications
-- **Slack** - Incoming Webhook integration
-- **Discord** - Webhook integration
-- **Generic Webhook** - Custom webhook endpoints with authentication
+This module has three layers. Read them in this order:
 
-## Usage
+1. **`channels.js`** -- Static configuration. Defines `CHANNEL_TYPES` object where each key is a channel ID (`teams`, `slack`, etc.) with its form fields, validation rules, and sensitive field markers. To add a new channel type, add an entry here.
 
-### Adding Notifications Section to SettingsModal
+2. **`forms.js`** -- UI rendering. `NotificationChannelForm` reads a channel's field definitions from `channels.js` and generates the form DOM, handles conditional field visibility (`showWhen`), masks sensitive fields, and wires up save/test callbacks.
 
-```javascript
-import {
-  SettingsModal,
-  getAllChannelTypes,
-  NotificationChannelForm,
-  NotificationAPI,
-  toast
-} from './site-framework/js/index.js';
+3. **`index.js`** -- API client + re-exports. `NotificationAPI` provides `getAll()`, `get(type)`, `save(type, config)`, `test(type, config)`, `delete(type)`. All calls go through `auth.fetch()` so auth tokens are attached automatically.
 
-// Create the notifications section content
-function createNotificationsSection() {
-  const container = document.createElement('div');
-  container.className = 'sf-notify-channels';
+The consuming code never touches these files directly. It imports `createNotificationsSection` from `../notificationsSection.js` which wires everything together into a settings panel section.
 
-  const channelTypes = getAllChannelTypes();
+## Backend counterpart
 
-  channelTypes.forEach(async (channelConfig) => {
-    const channelContainer = document.createElement('div');
-    container.appendChild(channelContainer);
+The server-side routes live at `src/site-framework/routes/notifications.js`. That file handles channel CRUD and contains the sender functions (`sendTeams`, `sendSlack`, etc.) for test notifications. When adding a new channel type, you must add both the frontend definition in `channels.js` AND the sender function in `routes/notifications.js`.
 
-    // Fetch existing config
-    let initialValues = {};
-    try {
-      const saved = await NotificationAPI.get(channelConfig.id);
-      if (saved) {
-        initialValues = { enabled: saved.enabled, ...saved.config };
-      }
-    } catch (err) {
-      console.error(`Failed to load ${channelConfig.id} config:`, err);
-    }
+## Sensitive field encryption
 
-    // Create the form
-    new NotificationChannelForm({
-      channelType: channelConfig.id,
-      container: channelContainer,
-      initialValues,
-      onSave: async (values) => {
-        try {
-          await NotificationAPI.save(channelConfig.id, values);
-          toast.success(`${channelConfig.name} configuration saved`);
-        } catch (err) {
-          toast.error(`Failed to save: ${err.message}`);
-        }
-      },
-      onTest: async (values) => {
-        try {
-          await NotificationAPI.test(channelConfig.id, values);
-          toast.success('Test notification sent!');
-        } catch (err) {
-          toast.error(`Test failed: ${err.message}`);
-        }
-      },
-      onToggle: (enabled) => {
-        console.log(`${channelConfig.name} ${enabled ? 'enabled' : 'disabled'}`);
-      }
-    });
-  });
-
-  return container;
-}
-
-// Create settings modal with notifications section
-const settingsModal = new SettingsModal({
-  sections: [
-    {
-      id: 'general',
-      label: 'General',
-      icon: '⚙️',
-      content: '<p>General settings go here...</p>'
-    },
-    {
-      id: 'notifications',
-      label: 'Notifications',
-      icon: '🔔',
-      content: createNotificationsSection
-    },
-    {
-      id: 'users',
-      label: 'Users',
-      icon: '👥',
-      content: '...' // User management
-    }
-  ]
-});
-
-// Open settings
-settingsModal.open();
-```
-
-### Importing the CSS
-
-Add this to your HTML or main CSS file:
-
-```html
-<link rel="stylesheet" href="/site-framework/css/notifications.css">
-```
-
-Or import in your main CSS:
-
-```css
-@import url('/site-framework/css/notifications.css');
-```
-
-## API Endpoints
-
-All endpoints require admin authentication.
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/notifications/channels` | Get all channel configs |
-| GET | `/api/notifications/channels/:type` | Get specific channel |
-| PUT | `/api/notifications/channels/:type` | Save channel config |
-| POST | `/api/notifications/channels/:type/test` | Test channel |
-| DELETE | `/api/notifications/channels/:type` | Delete channel |
-
-## Security
-
-- Sensitive fields (webhookUrl, passwords, tokens) are encrypted at rest
-- Sensitive fields are masked in API responses (shown as `••••••••`)
-- Only new values are encrypted; empty fields preserve existing values
-- Uses AES-256-CBC encryption
-
-## Environment Variables
-
-Set `ENCRYPTION_KEY` for production deployments:
-
-```bash
-ENCRYPTION_KEY=your-32-character-secret-key-here
-```
-
-## Adding Custom Channel Types
-
-Edit `channels.js` to add new channel types:
-
-```javascript
-export const CHANNEL_TYPES = {
-  // ... existing channels
-
-  myCustomChannel: {
-    id: 'myCustomChannel',
-    name: 'My Custom Channel',
-    icon: '🚀',
-    description: 'Description of the channel',
-    fields: [
-      {
-        id: 'apiKey',
-        label: 'API Key',
-        type: 'password',
-        required: true,
-        help: 'Your API key from the service'
-      }
-    ],
-    sensitive: ['apiKey']
-  }
-};
-```
-
-Then implement the sending logic in `routes.js`:
-
-```javascript
-async function sendMyCustomNotification(config, message) {
-  // Implementation
-}
-```
+Fields listed in a channel's `sensitive` array are encrypted with AES-256-CBC before storage and masked as `••••••••` in API responses. The encryption logic lives in `src/site-framework/db/encryption.js`. Set the `ENCRYPTION_KEY` env var in production.

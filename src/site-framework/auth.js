@@ -18,14 +18,14 @@
  *
  * SECURITY:
  * - JWT tokens with configurable expiry
- * - bcrypt password hashing (handled in database.js)
+ * - bcrypt password hashing (handled in db/users.js)
  * - Session tracking for token revocation
  * - API key authentication support
  */
 
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
-const { users, sessions, logs } = require('./database');
+const { users, sessions, logs } = require('./db');
 
 // ============================================
 // Configuration

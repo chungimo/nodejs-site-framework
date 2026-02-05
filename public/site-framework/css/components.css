@@ -572,6 +572,7 @@
 .sf-api-key-actions {
   display: flex;
   gap: var(--sf-spacing-sm);
+  justify-content: flex-end;
 }
 
 .sf-api-key-info {

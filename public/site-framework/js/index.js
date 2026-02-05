@@ -1,14 +1,31 @@
 /**
- * Site Framework - JavaScript Entry Point
+ * Site Framework - Frontend Entry Point
  * ============================================
  *
  * USAGE:
  *   import * as SF from './site-framework/js/index.js';
  *
  *   // Or import specific modules
- *   import { Modal, SettingsModal } from './site-framework/js/index.js';
- *   import { auth } from './site-framework/js/index.js';
- *   import { toast } from './site-framework/js/index.js';
+ *   import { Modal, SettingsModal, auth, toast } from './site-framework/js/index.js';
+ *
+ * EXPORTS:
+ *   Modal, ConfirmModal, getOpenModalCount  - Base modal system with stacking & keyboard support
+ *   SettingsModal                           - Fullscreen modal with sidebar section navigation
+ *   LogsModal                              - Terminal-style log viewer
+ *   LoginModal                             - Username/password login dialog
+ *   AccountModal                           - Self-service account settings (password, API key)
+ *   UserModal                              - Admin user edit/create dialog
+ *
+ *   createUsersSection, refreshUsers        - Users management table for SettingsModal
+ *   createNotificationsSection              - Notification channels UI for SettingsModal
+ *
+ *   auth                                   - Auth manager: login, logout, isLoggedIn, fetch
+ *   toast                                  - Toast notifications: info, success, warning, error
+ *
+ *   createField, validateField, ...         - Form field creation & validation utilities
+ *   Table                                  - Sortable data table component
+ *
+ *   CHANNEL_TYPES, NotificationAPI, ...     - Notification channel configs & API client
  */
 
 // Modal system
@@ -21,12 +38,12 @@ export { UserModal } from './userModal.js';
 
 // Settings section helpers
 export { createUsersSection, refreshUsers } from './usersSection.js';
-// createNotificationsSection is defined below after imports
+export { createNotificationsSection } from './notificationsSection.js';
 
 // Auth
 export { auth } from './auth.js';
 
-// Notifications
+// Toast notifications
 export { toast } from './toast.js';
 
 // Form utilities
@@ -54,58 +71,3 @@ export {
   NotificationChannelForm,
   NotificationAPI
 } from './notifications/index.js';
-
-// Notification settings section helper
-import { getAllChannelTypes as _getAllChannelTypes, NotificationChannelForm as _NotificationChannelForm, NotificationAPI as _NotificationAPI } from './notifications/index.js';
-import { toast as _toast } from './toast.js';
-
-export function createNotificationsSection() {
-  const container = document.createElement('div');
-  container.className = 'sf-notify-channels';
-
-  const channelTypes = _getAllChannelTypes();
-
-  channelTypes.forEach(async (channelConfig) => {
-    const channelContainer = document.createElement('div');
-    container.appendChild(channelContainer);
-
-    // Fetch existing config
-    let initialValues = {};
-    try {
-      const saved = await _NotificationAPI.get(channelConfig.id);
-      if (saved) {
-        initialValues = { enabled: saved.enabled, ...saved.config };
-      }
-    } catch (err) {
-      // Channel not configured yet, use defaults
-    }
-
-    // Create the form
-    new _NotificationChannelForm({
-      channelType: channelConfig.id,
-      container: channelContainer,
-      initialValues,
-      onSave: async (values) => {
-        try {
-          await _NotificationAPI.save(channelConfig.id, values);
-          _toast.success(`${channelConfig.name} configuration saved`);
-        } catch (err) {
-          _toast.error(`Failed to save: ${err.message}`);
-        }
-      },
-      onTest: async (values) => {
-        try {
-          await _NotificationAPI.test(channelConfig.id, values);
-          _toast.success('Test notification sent!');
-        } catch (err) {
-          _toast.error(`Test failed: ${err.message}`);
-        }
-      },
-      onToggle: (enabled) => {
-        // Toggle is saved when form is saved
-      }
-    });
-  });
-
-  return container;
-}
