@@ -4,11 +4,11 @@ A drop-in Node.js framework providing authentication, user management, settings,
 
 ## Screenshots
 
-<img src="docs/imgs/example-main_page.png" alt="Main Page" width="600">
-
-<img src="docs/imgs/example-settings_users.png" alt="Settings - Users" width="600">
-
-<img src="docs/imgs/example-settings_notifications.png" alt="Settings - Notifications" width="600">
+<p align="center">
+  <img src="docs/imgs/example-main_page.png" alt="Main Page" width="600">
+  <br>
+  <a href="docs/imgs/">Example Images</a>
+</p>
 
 ---
 
